@@ -89,6 +89,7 @@ Rx.Observable.range(1, 8)
     document.getElementById(id).outerHTML = html
 })
 
+
 //maybe this can be used instead of powers
 //state.scan((acc, x, i, source) => acc.concat([x]), [])
 //	.subscribe(x => console.log('scan', x))
