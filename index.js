@@ -71,16 +71,21 @@ const getNewPiece = () => {
 }
 getNewPiece()
 
+function positionFromString(str){
+    const a = str.split(',');
+    return [a[0] - 0, a[1] - 0]
+}
+
 const source = Rx.Observable.fromEvent(playground, 'click')
 const clicks$ = source
   .pluck('target', 'attributes', 'data', 'value')
   .filter(x => x !== null)
+  .map(positionFromString)
   .map(x => {
     const power = np;
     getNewPiece()
-    const a = x.split(',');
-    powers[getPositionId([a[0] - 0, a[1]])] = power
-    return [a[0] - 0, a[1] - 0, power]
+    powers[getPositionId(x)] = np
+    return [x[0], x[1], power]
   })
 
 clicks$.concatMap(x => levelUp(x))
@@ -89,16 +94,45 @@ clicks$.concatMap(x => levelUp(x))
     state.onNext(x)
   })
 
+const hover = Rx.Observable.fromEvent(playground, 'mouseover')
+  .pluck('target', 'attributes', 'data', 'value')
+  .filter(x => x != null)
+  .distinctUntilChanged()
+  .map(positionFromString)
+const mouseOut = Rx.Observable.fromEvent(playground, 'mouseout')
+  .pluck('target', 'attributes', 'data', 'value')
+  .filter(x => x != null)
+  .distinctUntilChanged()
+  .map(positionFromString)
+
+hover.scan((acc, x) => [x, acc[0]], [[0,0], null])
+  .subscribe(x=> {
+    console.log('hover scan', x[0], 'out', x[1])
+    writeItem(x[1])
+    const hovered = [x[0][0],x[0][1], np]
+    writeItem(hovered)
+  });
+/*
+hover.combineLatest(mouseOut)
+  .subscribe(x=> {
+    //console.log('hover', x[0], 'out', x[1])
+    writeItem(x[1]) // clear hovered back to current power
+    const hovered = [x[0][0],x[0][1], np]
+    writeItem(hovered)
+  });
+*/
 Rx.Observable.range(1, 8)
-	.concatMap(x => Rx.Observable.range(1, 8)
-							      .map(y=> [y, x]))
+  .concatMap(x => Rx.Observable.range(1, 8)
+                    .map(y=> [y, x]))
   //.concat(Rx.Observable.return([1,1,1]))
   .concat(state)
-	.subscribe(i => {
+  .subscribe(writeItem)
+
+function writeItem(i) {
   const id = getPositionId(i)
   const power = i[2] || 0
   const className = 'btn ' + classes[power]
-  const disabled = power === 0 ? '' : 'disabled'
+  const disabled = power === 0 ? '' : 'readonly'
   const html = `<button id='${id}'
                         class='${className}'
                         title='${i[0]} ${i[1]}'
@@ -110,8 +144,11 @@ Rx.Observable.range(1, 8)
     playground.innerHTML += html + ((i[0] === 8) ? '<br>' : '')
   else
     document.getElementById(id).outerHTML = html
-})
+}
+
+//for render
+
 
 //maybe this can be used instead of powers
 //state.scan((acc, x, i, source) => acc.concat([x]), [])
-//	.subscribe(x => console.log('scan', x))
+//  .subscribe(x => console.log('scan', x))
